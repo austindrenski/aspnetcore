@@ -10,6 +10,26 @@ namespace Microsoft.AspNetCore.Builder;
 public class RoutingEndpointConventionBuilderExtensionsTest
 {
     [Fact]
+    public void RequireHost_HostNames()
+    {
+        // Arrange
+        var builder = CreateBuilder();
+
+        // Act
+        builder.RequireHost("contoso.com:8080");
+
+        // Assert
+        var convention = Assert.Single(builder.Conventions);
+
+        var endpointModel = new RouteEndpointBuilder((context) => Task.CompletedTask, RoutePatternFactory.Parse("/"), 0);
+        convention(endpointModel);
+
+        var hostMetadata = Assert.IsType<HostAttribute>(Assert.Single(endpointModel.Metadata));
+
+        Assert.Equal("contoso.com:8080", hostMetadata.Hosts.Single());
+    }
+
+    [Fact]
     public void RequireHost_AddsHostMetadata()
     {
         // Arrange
@@ -149,6 +169,62 @@ public class RoutingEndpointConventionBuilderExtensionsTest
         Assert.Equal("SomeEndpointGroupName", endpointGroupName.EndpointGroupName);
     }
 
+    [Fact]
+    public void FinalConventions_RunAfterOtherConventions()
+    {
+        // Arrange
+        var builder = CreateBuilder();
+
+        // Act
+        builder.WithMetadata("test-metadata");
+        builder.Finally(inner =>
+        {
+            if (inner.Metadata.Any(md => md is string smd && smd == "test-metadata"))
+            {
+                inner.Metadata.Add("found-previous-metadata");
+            }
+        });
+
+        // Assert
+        var endpoint = builder.Build();
+
+        var metadata = endpoint.Metadata.OfType<string>().ToList();
+        Assert.Contains("test-metadata", metadata);
+        Assert.Contains("found-previous-metadata", metadata);
+    }
+
+    [Fact]
+    public void FinalConventions_CanExamineMetadataInOrder()
+    {
+        // Arrange
+        var builder = CreateBuilder();
+
+        // Act
+        builder.WithMetadata("test-metadata");
+        builder.Finally(inner =>
+        {
+            if (inner.Metadata.Any(md => md is string smd && smd == "test-metadata"))
+            {
+                inner.Metadata.Add("inner-metadata");
+            }
+        });
+        builder.Finally(inner =>
+        {
+            if (inner.Metadata.Any(md => md is string smd && smd == "inner-metadata"))
+            {
+                inner.Metadata.Add("inner-metadata-2");
+            }
+        });
+
+        // Assert
+        var endpoint = builder.Build();
+
+        var metadata = endpoint.Metadata.OfType<string>().ToList();
+        Assert.Contains("test-metadata", metadata);
+        Assert.Contains("inner-metadata", metadata);
+        Assert.Contains("inner-metadata-2", metadata);
+    }
+
     private TestEndpointConventionBuilder CreateBuilder()
     {
         var conventionBuilder = new DefaultEndpointConventionBuilder(new RouteEndpointBuilder(
@@ -163,6 +239,7 @@ public class RoutingEndpointConventionBuilderExtensionsTest
     {
         private readonly DefaultEndpointConventionBuilder _endpointConventionBuilder;
         public bool TestProperty { get; } = true;
+        public IList<Action<EndpointBuilder>> Conventions { get; } = new List<Action<EndpointBuilder>>();
 
         public TestEndpointConventionBuilder(DefaultEndpointConventionBuilder endpointConventionBuilder)
         {
@@ -171,7 +248,13 @@ public class RoutingEndpointConventionBuilderExtensionsTest
 
         public void Add(Action<EndpointBuilder> convention)
         {
+            Conventions.Add(convention);
             _endpointConventionBuilder.Add(convention);
+        }
+
+        public void Finally(Action<EndpointBuilder> finalConvention)
+        {
+            _endpointConventionBuilder.Finally(finalConvention);
         }
 
         public Endpoint Build()

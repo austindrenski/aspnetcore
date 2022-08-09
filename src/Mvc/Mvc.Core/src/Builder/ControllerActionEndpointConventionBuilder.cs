@@ -14,11 +14,13 @@ public sealed class ControllerActionEndpointConventionBuilder : IEndpointConvent
     // The lock is shared with the data source.
     private readonly object _lock;
     private readonly List<Action<EndpointBuilder>> _conventions;
+    private readonly List<Action<EndpointBuilder>> _finalConventions;
 
     internal ControllerActionEndpointConventionBuilder(object @lock, List<Action<EndpointBuilder>> conventions)
     {
         _lock = @lock;
         _conventions = conventions;
+        _finalConventions = new();
     }
 
     /// <summary>
@@ -38,5 +40,16 @@ public sealed class ControllerActionEndpointConventionBuilder : IEndpointConvent
         {
             _conventions.Add(convention);
         }
+    }
+
+    /// <inheritdoc />
+    public void Finally(Action<EndpointBuilder> finalConvention)
+    {
+        ArgumentNullException.ThrowIfNull(nameof(finalConvention));
+
+        lock (_lock)
+        {
+            _finalConventions.Add(finalConvention);
+        };
     }
 }

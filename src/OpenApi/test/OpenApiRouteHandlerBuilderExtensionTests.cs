@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -113,6 +114,30 @@ public class OpenApiRouteHandlerBuilderExtensionTests
         Assert.Collection(groupDataSource.Endpoints,
             e => Assert.NotNull(e.Metadata.GetMetadata<OpenApiOperation>()),
             e => Assert.NotNull(e.Metadata.GetMetadata<OpenApiOperation>()));
+    }
+
+    [Fact]
+    public void WithOpenApi_WorksWithMapGroupAndEndpointAnnotations()
+    {
+        var hostEnvironment = new HostEnvironment() { ApplicationName = nameof(OpenApiOperationGeneratorTests) };
+        var serviceProviderIsService = new ServiceProviderIsService();
+        var serviceProvider = new ServiceCollection()
+            .AddSingleton<IServiceProviderIsService>(serviceProviderIsService)
+            .AddSingleton<IHostEnvironment>(hostEnvironment)
+            .BuildServiceProvider();
+
+        var builder = new DefaultEndpointRouteBuilder(new ApplicationBuilder(serviceProvider));
+        string GetString() => "Foo";
+        var myGroup = builder.MapGroup("/group");
+        myGroup.WithOpenApi();
+        myGroup.MapDelete("/a", GetString).Produces<string>(201);
+
+        // The RotueGroupBuilder adds a single EndpointDataSource.
+        var groupDataSource = Assert.Single(builder.DataSources);
+        var endpoint = Assert.Single(groupDataSource.Endpoints);
+        var operation = endpoint.Metadata.GetMetadata<OpenApiOperation>();
+        Assert.NotNull(operation);
+        Assert.Equal("201", operation.Responses.Keys.SingleOrDefault());
     }
 
     [Fact]

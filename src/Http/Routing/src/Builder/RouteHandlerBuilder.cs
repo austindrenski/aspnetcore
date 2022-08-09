@@ -12,15 +12,18 @@ public sealed class RouteHandlerBuilder : IEndpointConventionBuilder
 {
     private readonly IEnumerable<IEndpointConventionBuilder>? _endpointConventionBuilders;
     private readonly ICollection<Action<EndpointBuilder>>? _conventions;
+    private readonly ICollection<Action<EndpointBuilder>>? _finalConventions;
 
     /// <summary>
     /// Instantiates a new <see cref="RouteHandlerBuilder" /> given a ThrowOnAddAfterEndpointBuiltConventionCollection from
     /// <see cref="RouteEndpointDataSource.AddRouteHandler(Routing.Patterns.RoutePattern, Delegate, IEnumerable{string}?, bool)"/>.
     /// </summary>
     /// <param name="conventions">The convention list returned from <see cref="RouteEndpointDataSource"/>.</param>
-    internal RouteHandlerBuilder(ICollection<Action<EndpointBuilder>> conventions)
+    /// <param name="finalConventions">The final convention list returned from <see cref="RouteEndpointDataSource"/>.</param>
+    internal RouteHandlerBuilder(ICollection<Action<EndpointBuilder>> conventions, ICollection<Action<EndpointBuilder>> finalConventions)
     {
         _conventions = conventions;
+        _finalConventions = finalConventions;
     }
 
     /// <summary>
@@ -48,6 +51,22 @@ public sealed class RouteHandlerBuilder : IEndpointConventionBuilder
             foreach (var endpointConventionBuilder in _endpointConventionBuilders!)
             {
                 endpointConventionBuilder.Add(convention);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public void Finally(Action<EndpointBuilder> finalConvention)
+    {
+        if (_finalConventions is not null)
+        {
+            _finalConventions.Add(finalConvention);
+        }
+        else
+        {
+            foreach (var endpointConventionBuilder in _endpointConventionBuilders!)
+            {
+                endpointConventionBuilder.Finally(finalConvention);
             }
         }
     }

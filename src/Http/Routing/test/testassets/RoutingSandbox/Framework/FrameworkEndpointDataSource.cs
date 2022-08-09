@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -11,6 +11,7 @@ internal class FrameworkEndpointDataSource : EndpointDataSource, IEndpointConven
 {
     private readonly RoutePatternTransformer _routePatternTransformer;
     private readonly List<Action<EndpointBuilder>> _conventions;
+    private readonly List<Action<EndpointBuilder>> _finalConventions;
 
     public List<RoutePattern> Patterns { get; }
     public List<HubMethod> HubMethods { get; }
@@ -21,6 +22,7 @@ internal class FrameworkEndpointDataSource : EndpointDataSource, IEndpointConven
     {
         _routePatternTransformer = routePatternTransformer;
         _conventions = new List<Action<EndpointBuilder>>();
+        _finalConventions = new List<Action<EndpointBuilder>>();
 
         Patterns = new List<RoutePattern>();
         HubMethods = new List<HubMethod>();
@@ -67,6 +69,11 @@ internal class FrameworkEndpointDataSource : EndpointDataSource, IEndpointConven
                     convention(endpointBuilder);
                 }
 
+                foreach (var finalConvention in _finalConventions)
+                {
+                    finalConvention(endpointBuilder);
+                }
+
                 endpoints.Add(endpointBuilder.Build());
             }
         }
@@ -83,6 +90,12 @@ internal class FrameworkEndpointDataSource : EndpointDataSource, IEndpointConven
     {
         _conventions.Add(convention);
     }
+
+    public void Finally(Action<EndpointBuilder> finalConvention)
+    {
+        _finalConventions.Add(finalConvention);
+    }
+
 }
 
 internal class HubMethod

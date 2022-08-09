@@ -31,6 +31,7 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
     {
 
         var conventions = new ThrowOnAddAfterEndpointBuiltConventionCollection();
+        List<Action<EndpointBuilder>> finalConventions = new();
 
         _routeEntries.Add(new()
         {
@@ -39,9 +40,10 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
             HttpMethods = httpMethods,
             RouteAttributes = RouteAttributes.None,
             Conventions = conventions,
+            FinalConventions = finalConventions
         });
 
-        return new RouteHandlerBuilder(conventions);
+        return new RouteHandlerBuilder(conventions, finalConventions);
     }
 
     public RouteHandlerBuilder AddRouteHandler(
@@ -51,6 +53,7 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
         bool isFallback)
     {
         var conventions = new ThrowOnAddAfterEndpointBuiltConventionCollection();
+        List<Action<EndpointBuilder>> finalConventions = new();
 
         var routeAttributes = RouteAttributes.RouteHandler;
         if (isFallback)
@@ -65,9 +68,10 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
             HttpMethods = httpMethods,
             RouteAttributes = routeAttributes,
             Conventions = conventions,
+            FinalConventions = finalConventions
         });
 
-        return new RouteHandlerBuilder(conventions);
+        return new RouteHandlerBuilder(conventions, finalConventions);
     }
 
     public override IReadOnlyList<RouteEndpoint> Endpoints
@@ -88,7 +92,7 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
         var endpoints = new RouteEndpoint[_routeEntries.Count];
         for (int i = 0; i < _routeEntries.Count; i++)
         {
-            endpoints[i] = (RouteEndpoint)CreateRouteEndpointBuilder(_routeEntries[i], context.Prefix, context.Conventions).Build();
+            endpoints[i] = (RouteEndpoint)CreateRouteEndpointBuilder(_routeEntries[i], context.Prefix, context.Conventions, context.FinalConventions).Build();
         }
         return endpoints;
     }
@@ -109,7 +113,7 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
     [UnconditionalSuppressMessage("Trimmer", "IL2026",
         Justification = "We surface a RequireUnreferencedCode in the call to the Map method adding this EndpointDataSource. The trimmer is unable to infer this.")]
     private RouteEndpointBuilder CreateRouteEndpointBuilder(
-        RouteEntry entry, RoutePattern? groupPrefix = null, IReadOnlyList<Action<EndpointBuilder>>? groupConventions = null)
+        RouteEntry entry, RoutePattern? groupPrefix = null, IReadOnlyList<Action<EndpointBuilder>>? groupConventions = null, IReadOnlyList<Action<EndpointBuilder>>? groupFinalConventions = null)
     {
         var pattern = RoutePatternFactory.Combine(groupPrefix, entry.RoutePattern);
         var handler = entry.RouteHandler;
@@ -225,6 +229,19 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
             builder.RequestDelegate = factoryCreatedRequestDelegate;
         }
 
+        if (groupFinalConventions is not null)
+        {
+            foreach (var finalConvention in groupFinalConventions)
+            {
+                finalConvention(builder);
+            }
+        }
+
+        foreach (var entrySpecificFinalConvention in entry.FinalConventions)
+        {
+            entrySpecificFinalConvention(builder);
+        }
+
         return builder;
     }
 
@@ -265,6 +282,7 @@ internal sealed class RouteEndpointDataSource : EndpointDataSource
         public IEnumerable<string>? HttpMethods { get; init; }
         public RouteAttributes RouteAttributes { get; init; }
         public ThrowOnAddAfterEndpointBuiltConventionCollection Conventions { get; init; }
+        public List<Action<EndpointBuilder>> FinalConventions { get; init; }
     }
 
     [Flags]

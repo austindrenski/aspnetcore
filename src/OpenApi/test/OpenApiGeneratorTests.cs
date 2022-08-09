@@ -1024,5 +1024,10 @@ public class OpenApiOperationGeneratorTests
         {
             throw new NotImplementedException();
         }
+
+        public void Finally(Action<EndpointBuilder> finalConvention)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
