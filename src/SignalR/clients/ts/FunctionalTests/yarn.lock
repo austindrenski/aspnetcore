@@ -69,12 +69,19 @@
     "@jridgewell/sourcemap-codec" "1.4.14"
 
 "@microsoft/signalr-protocol-msgpack@link:../signalr-protocol-msgpack":
-  version "0.0.0"
-  uid ""
+  version "5.0.0-dev"
+  dependencies:
+    "@microsoft/signalr" "link:../signalr"
+    "@msgpack/msgpack" "^2.7.0"
 
 "@microsoft/signalr@link:../signalr":
-  version "0.0.0"
-  uid ""
+  version "5.0.0-dev"
+  dependencies:
+    abort-controller "^3.0.0"
+    eventsource "^2.0.2"
+    fetch-cookie "^2.0.3"
+    node-fetch "^2.6.7"
+    ws "^7.4.5"
 
 "@msgpack/msgpack@^2.7.0":
   version "2.8.0"
@@ -1629,9 +1636,9 @@ flatted@^3.2.7:
   integrity sha1-YJ85IHy2FLidB2W0d8stQ3+/l4c=
 
 follow-redirects@^1.0.0:
-  version "1.15.2"
-  resolved "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public-npm/npm/registry/follow-redirects/-/follow-redirects-1.15.2.tgz#b460864144ba63f2681096f274c4e57026da2c13"
-  integrity sha1-tGCGQUS6Y/JoEJbydMTlcCbaLBM=
+  version "1.15.6"
+  resolved "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public-npm/npm/registry/follow-redirects/-/follow-redirects-1.15.6.tgz#7f815c0cda4249c74ff09e95ef97c23b5fd0399b"
+  integrity sha1-f4FcDNpCScdP8J6V75fCO1/QOZs=
 
 form-data@^3.0.0:
   version "3.0.1"
